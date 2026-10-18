@@ -88,7 +88,7 @@ export class PgsClient {
     this.limiter = new SlidingWindowLimiter(options.maxRequestsPerMinute ?? 90);
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.maxRetries = options.maxRetries ?? 2;
-    this.userAgent = options.userAgent ?? "pgs-catalog-mcp/0.1.0 (+https://github.com/lderek/pgs-catalog-mcp)";
+    this.userAgent = options.userAgent ?? "pgs-catalog-mcp/0.1.0";
   }
 
   get base(): string {

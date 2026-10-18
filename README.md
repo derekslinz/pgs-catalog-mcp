@@ -63,8 +63,7 @@ arguments as one array, and environment variables under `environment`:
 }
 ```
 
-For Hermes, add to `~/.hermes/config.yaml`, which is YAML. `hermes mcp add
-`hermes mcp add pgs-catalog --command node --args <absolute-path-to>/dist/index.js`
+For Hermes, add to `~/.hermes/config.yaml`, which is YAML. `hermes mcp add pgs-catalog --command node --args <absolute-path-to>/dist/index.js`
 does the same thing and also probes the connection:
 
 ```yaml

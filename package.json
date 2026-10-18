@@ -15,7 +15,7 @@
     "test:e2e": "npm run build && node scripts/smoke.mjs"
   },
   "keywords": [],
-  "author": "lderek",
+  "author": "Derek Linz",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
