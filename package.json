@@ -1,7 +1,7 @@
 {
   "name": "pgs-catalog-mcp",
   "version": "0.1.0",
-  "description": "MCP server for the PGS Catalog REST API (polygenic scores, publications, traits, performance metrics)",
+  "description": "MCP server for the PGS Catalog REST API and FTP site (polygenic scores, publications, traits, performance metrics, scoring files)",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
