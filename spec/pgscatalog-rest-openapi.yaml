@@ -1,0 +1,2603 @@
+openapi: 3.0.3
+servers:
+  - url: https://www.pgscatalog.org/
+info:
+
+  title: PGS Catalog REST API
+  version: '1.8.6'
+  description: |
+    Programmatic access to the PGS Catalog metadata. More information about the metadata and its structure can be found [here](/docs/).
+
+    <i class="fas fa-exclamation-circle pgs_color_1"></i> Each PGS is provided as a scoring file (containing the variants, alleles, effect weights) on our <a href="http://ftp.ebi.ac.uk/pub/databases/spot/pgs/scores/" target="_blank">FTP site</a>.
+    The variants are not distributed within this API; however, a link to the scoring file is provided in the<code>ftp_scoring_file</code>field for each result of the<code>/rest/score/</code>endpoints for ease of download.
+
+    ---
+
+    ###### REST API settings
+
+    * `pagination`: This REST API is using pagination for the endpoints returning more than 1 results. It is currently set to **50** results per page.
+      <a class="toggle_btn pgs_btn_plus" id="pagination">More information</a>
+      <div class="toggle_content" id="content_pagination" style="display:none">
+
+        ###### **Pagination structure**
+
+        Here is an example of the pagination result structure in JSON:
+
+        ```
+          {
+            "size": 50,
+            "count": 137,
+            "next": "https://www.pgscatalog.org/rest/score/all?limit=50&offset=50",
+            "previous": null,
+            "results": [
+              < list the results 1 to 50 >
+            ]
+          }
+        ```
+        * **size**: is the number of results in the current page.
+        * **count**: is the overall number of results.
+        * **next**: is the URL to the following page of results.
+        * **previous**: is the URL to the preceding page of results (only present if you are not on the first page).
+        * **results**: contains the list of results of the current page.
+        <pre></pre>
+        ###### **Pagination parameters**
+        * **limit**: The number of results per page can be overwritten using this parameter, e.g:
+          * <code>.../rest/score/all/?limit=100</code>: returns the first 100 results.
+          * <code>.../rest/score/all/?limit=150</code>: returns all the results (the overall number of results is 137 in our example above).
+
+          The default value is **50**. The maximum value is **250**. Over this maximum value, the REST API returns an error 400.
+
+        * **offset**: This parameter indicates the starting position (0 based) of the query in relation to the complete set of results. It provides access to a desired range of results, e.g.:
+          * <code>.../rest/score/all/?offset=75</code> provides results from the number **76** to **125**, as the number of results per page is **50** by default (equivalent to "limit=50")
+          * <code>.../rest/score/all/?offset=75&limit=60</code> provides results from the number **76** to **135**
+
+      </div>
+
+
+    * `rate limit`: The limit number of queries is set to **100** queries per minute.
+      <a class="toggle_btn pgs_btn_plus" id="rate_limit">More information</a>
+      <div class="toggle_content" id="content_rate_limit" style="display:none">
+        Here is an example of the JSON message returned if the rate limit is reached:
+
+        ```
+          {
+            "message": "request limit exceeded",
+            "availableIn": "33 seconds"
+          }
+        ```
+        * **message**: description of the error.
+        * **availableIn**: number of seconds before the rate limit is reset.
+      </div>
+
+    ---
+
+    <a class="toggle_btn pgs_btn_plus" id="changelog">REST API version changelog</a>
+    <div class="toggle_content" id="content_changelog" style="display:none">
+
+      * <span class="badge badge-pill badge-pgs">1.8.6</span> - January 2023:
+        * New field **date_release** in the Score schemas (`/rest/score/` endpoints), containing the release date of the Score in the PGS Catalog.
+        * New field **date_release** in the Publication schemas (`/rest/publication/` endpoints), containing the release date of the Publication in the PGS Catalog.
+
+      * <span class="badge badge-pill badge-pgs">1.8.5</span> - December 2022:
+        * Add deprecation message about the parameter 'pgs_ids' of the endpoint `/rest/score/search` as it is redundant with the parameter 'filter_ids'  of the endpoint `/rest/score/all`.
+        * Fix the parameter 'include_parents' for the endpoint `/rest/trait/all`.
+        * New parameter 'include_child_associated_pgs_ids' for the endpoint `/rest/trait/all` to display the list of PGS IDs associated with the children traits.
+
+      * <span class="badge badge-pill badge-pgs">1.8.4</span> - August 2022:
+        * New field **ftp_harmonized_scoring_files** in the Score schemas (`/rest/score/` endpoints), listing the URLs to the different harmonized scoring files.
+        * New field **ensembl_version** in the `/rest/info/` endpoint: Ensembl version used to generate the harmonized scoring files.
+
+      * <span class="badge badge-pill badge-pgs">1.8.3</span> - February 2022:
+        * New parameter 'filter_ids' to narrow down the results in the following endpoints:
+          * `/rest/score/all`
+          * `/rest/publication/all`
+          * `/rest/trait/all`
+          * `/rest/performance/all`
+          * `/rest/cohort/all`
+          * `/rest/sample_set/all`
+        * New field **name_others** in the Cohort schemas (`/rest/cohort/` endpoints).
+
+      * <span class="badge badge-pill badge-pgs">1.8.2</span> - October 2021:
+        * New field **weight_type** in the Score schemas (`/rest/score/` endpoints).
+        * New parameters 'pgp_id' and 'pmid' for the endpoints `/rest/performance/search` and `/rest/sample_set/search`.
+        * New parameter 'pgp_id' for the endpoint `/rest/score/search`.
+
+      * <span class="badge badge-pill badge-pgs">1.8.1</span> - July 2021:
+        * Change the data type of the field **source_PMID** to numeric in the Sample schemas
+        * New field **source_DOI** in the Sample schemas and move the DOI data from **source_PMID** to this new field.
+
+      * <span class="badge badge-pill badge-pgs">1.8</span> - June 2021:
+        * New endpoint `/rest/api_versions` providing the list of all the REST API versions and their changelogs.
+        * Change the data type of the field **rest_api/version** in `/rest/info` to **string**.
+        * Change the data structure of the `/rest/ancestry_categories` endpoint by adding the new fields **display_category** and **categories**.
+
+      * <span class="badge badge-pill badge-pgs">1.7</span> - April 2021:
+        * New data **ancestry_distribution** in the `/rest/score` endpoints, providing information about ancestry distribution on each stage of the PGS.
+        * New endpoint `/rest/ancestry_categories` providing the list of ancestry symbols and names.
+        * New data **PMID** (PubMed ID) in the `/rest/info` endpoint, under the **citation** category.
+
+      * <span class="badge badge-pill badge-pgs">1.6</span> - March 2021:
+        * New endpoint `/rest/info` with data such as the REST API version, latest release date and counts, PGS citation, ...
+        * New endpoint `/rest/cohort/all` returning all the Cohorts and their associated PGS.
+        * New endpoint `/rest/sample_set/all` returning all the Sample Set data.
+
+      * <span class="badge badge-pill badge-pgs">1.5</span> - February 2021:
+        * Split the array of the field **associated_pgs_ids** (from the `/rest/publication/` endpoint) in 2 arrays **development** and **evaluation**, e.g.:
+          ```
+            "associated_pgs_ids": {
+              "development": [
+                  "PGS000011"
+              ],
+              "evaluation": [
+                  "PGS000010",
+                  "PGS000011"
+              ]
+            }
+          ```
+
+        * New flag parameter **include_parents** for the endpoint `/rest/trait/all` to display the traits in the catalog + their parent traits (default: 0)
+
+      * <span class="badge badge-pill badge-pgs">1.4</span> - January 2021:
+        * Setup a maximum value for the `limit` parameter.
+        * Add a new field **size** at the top of the paginated results, to indicate the number of results visible in the page.
+        * Replace the fields **labels** and **value** under performance_metrics**&rarr;**effect_sizes**/**class_acc**/**othermetrics in the `/rest/performance` endpoints by new fields: **name_long**, **name_short**, **estimate**, **ci_lower**, **ci_upper** and **se**.
+
+          Now the content of the **labels** and **value** fields are structured like this, e.g.:
+          ```
+            {
+              "name_long": "Odds Ratio",
+              "name_short": "OR",
+              "estimate": 1.54,
+              "ci_lower": 1.51,
+              "ci_upper": 1.57,
+              "se": 0.0663
+            }
+          ```
+        * Restructure the **samples**&rarr;**sample_age**/**followup_time** JSON (used in several endpoints):
+          * Merge and replace the fields **mean** and **median** into generic fields **estimate_type** and **estimate**:
+            ```
+              "estimate_type": "mean",
+              "estimate": 53.0
+            ```
+          * Merge and replace the fields **se** and **sd** into generic fields **variability_type** and **variability**:
+            ```
+              "variability_type": "sd",
+              "variability": 16.0,
+            ```
+          * Merge and replace the fields **range** and **iqr** by a new structure **interval**:
+            ```
+              "interval": {
+                "type": "range",
+                "lower": 51.0,
+                "upper": 77.0
+              }
+            ```
+            Note: The field **type** can take the value 'range', 'iqr' or 'ci'.
+
+      * <span class="badge badge-pill badge-pgs">1.3</span> - November 2020:
+        * New endpoint `/rest/performance/all`.
+        * New field **license** in the `/rest/score` endpoints.
+
+      * <span class="badge badge-pill badge-pgs">1.2</span> - July 2020:
+        * Update `/rest/trait/search`:
+          * New parameters '*include_children*' and '*exact*'.
+          * New field **child_associated_pgs_ids**
+        * Update `/rest/trait/{trait_id}`:
+          * New parameter '*include_children*'.
+          * New field **child_associated_pgs_ids**
+          * New field **child_traits** present when the parameter '*include_children*' is set to 1.
+
+      * <span class="badge badge-pill badge-pgs">1.1</span> - June 2020:
+        * New endpoint `/rest/trait_category/all`.
+        * New field **trait_categories** in the `/rest/trait` endpoints.
+
+      * <span class="badge badge-pill badge-pgs">1.0</span> - May 2020:
+        * First version of the PGS Catalog REST API
+    </div>
+
+    ---
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  contact:
+    email: pgs-info@ebi.ac.uk
+    name: PGS Catalog
+    url: https://www.pgscatalog.org
+  x-logo:
+    url: https://raw.githubusercontent.com/PGScatalog/PGS_Catalog/master/catalog/static/catalog/imgs/favicons/apple-touch-icon.png
+    altText: PGS Catalog logo
+tags:
+  - name: "Score endpoints"
+    description: Polygenic Score metadata with associated traits, publications, samples and cohorts
+  - name: "Publication endpoints"
+    description: PGS Publication metadata (PubMed IDs, doi, authors, associated Polygenic Scores, ...)
+  - name: "Trait endpoints"
+    description: PGS Trait metadata (ontology data [ID, label, description, URL, ...], associated Polygenic Scores, ...)
+  - name: "Performance Metric endpoints"
+    description: PGS Performance metrics metadata (odd ratio, beta coefficient, C-index, ...) with associated scores, publications, samples and cohorts
+  - name: "Sample endpoints"
+    description: PGS Sample metadata (number of individuals, ancestry, cohorts)
+  - name: "Release endpoints"
+    description: PGS Release information (release date, number of new scores/publication/performance and their IDs)
+  - name: "Other endpoints"
+    description: "PGS extra endpoints: **/rest/info** (REST API version, data counts, PGS citation, ...), **/rest/api_versions** (REST API version changelogs), **/rest/ancestry_categories** (ancestry symbols and names) and specific queries from collaborators"
+
+components:
+  schemas:
+
+    Cohort:
+      type: object
+      description: "Structure containing information about a Cohort."
+      properties:
+        name_short:
+          type: string
+          description: "Cohort symbol"
+          example: "ABCFS"
+        name_full:
+          type: string
+          description: "Cohort full name"
+          example: "Australian Breast Cancer Family Study"
+        name_others:
+          type: string
+          description: "Previous/other/additional names (e.g. sub-cohorts)"
+          example: "GHS-I, GHS-II"
+
+    Cohort_extended:
+      description: "Based on the **Cohort** schema, with the addition of the '**associated_pgs_ids**'."
+      allOf:
+        - $ref: '#/components/schemas/Cohort'
+        - type: object
+          required:
+            - cohort_symbol
+          properties:
+            associated_pgs_ids:
+              type: object
+              description: "List of associated Polygenic Score IDs at the development and evaluation stages"
+              properties:
+                development:
+                  type: array
+                  description: "List of associated Polygenic Score IDs at the PGS development stage"
+                  example: ["PGS000001", "PGS000002"]
+                  items:
+                    type: string
+                evaluation:
+                  type: array
+                  description: "List of associated Polygenic Score IDs at the PGS evaluation stage"
+                  example: ["PGS000003"]
+                  items:
+                    type: string
+
+    Demographic:
+      type: object
+      description: "Demographic data such as **sample age** or **followup time**"
+      properties:
+        estimate_type:
+          type: string
+          description: "Type of value, e.g. mean, median"
+          example: "mean"
+        estimate:
+          type: number
+          example: 53.0
+        interval:
+          type: object
+          description: "Interval values"
+          properties:
+            type:
+              type: string
+              description: "Type of interval: range, iqr (Interquartile), ci (Confidence Interval)"
+              example: "range"
+            lower:
+              type: number
+              description: "Lower bound of the interval"
+              example: 51.0
+            upper:
+              type: number
+              description: "Upper bound of the interval"
+              example: 57.0
+        variability_type:
+          type: string
+          description: "Type of variability data, e.g. Standard Error (se), Standard deviation (sd), ..."
+          example: "se"
+        variability:
+          type: number
+          example: 16.0
+        unit:
+          type: string
+          example: "years"
+
+    EFOTrait:
+      type: object
+      description: "Structure containing information about a Trait. Mainly extracted from the Experimental Factor Ontology (EFO)."
+      required:
+        - trait_id
+      properties:
+        id:
+          type: string
+          description: "A trait identifier that links to an Ontology (e.g. EFO), and NHGRI-EBI GWAS catalog."
+          example: "'EFO_0001645"
+        label:
+          type: string
+          description: "Trait label/name"
+          example: "coronary artery disease"
+        description:
+          type: string
+          description: "Detailed description of the trait from EFO."
+          example: "Narrowing of the coronary arteries due to fatty deposits inside the arterial walls."
+        url:
+          type: string
+          description: "External link to the EFO entry"
+          example: "https://www.ebi.ac.uk/efo/EFO_0001645"
+
+
+    EFOTrait_extended:
+      description: "Based on the **EFOTrait** schema, with the addition of the '**trait_synonyms**', the '**trait_mapped_terms**' and the '**associated_pgs_ids**'."
+      allOf:
+        - $ref: '#/components/schemas/EFOTrait'
+        - type: object
+          required:
+            - trait_id
+          properties:
+            trait_categories:
+              type: array
+              description: "List of trait categories associated with the trait"
+              items:
+                type: string
+                example: "Cardiovascular disease"
+            trait_synonyms:
+              type: array
+              description: "List of associated trait synonyms"
+              example: ["Artery Disease, Coronary","CAD"]
+              items:
+                type: string
+            trait_mapped_terms:
+              type: array
+              description: "List of associated external references/IDs"
+              items:
+                type: string
+            associated_pgs_ids:
+              type: array
+              description: "List of associated Polygenic Score IDs"
+              items:
+                type: string
+
+    EFOTrait_Ontology:
+      description: "Structure containing information about a Trait, with extra ontology information (i.e. children traits and their associated Polygenic Scores). Mainly extracted from the Experimental Factor Ontology (EFO)."
+      type: object
+      required:
+        - trait_id
+      properties:
+        id:
+          type: string
+          description: "A trait identifier that links to an Ontology (e.g. EFO), and NHGRI-EBI GWAS catalog."
+          example: "EFO_0000305"
+        label:
+          type: string
+          description: "Trait label/name"
+          example: "breast carcinoma"
+        description:
+          type: string
+          description: "Detailed description of the trait from EFO."
+          example: "A carcinoma that arises from epithelial cells of the breast [MONDO: DesignPattern]"
+        url:
+          type: string
+          description: "External link to the EFO entry"
+          example: "https://www.ebi.ac.uk/efo/EFO_0000305"
+        trait_categories:
+          type: array
+          description: "List of trait categories associated with the trait"
+          example: ["Cancer"]
+          items:
+            type: string
+        trait_synonyms:
+          type: array
+          description: "List of associated trait synonyms"
+          example: ["CA - Carcinoma of breast","Mammary carcinoma"]
+          items:
+            type: string
+        trait_mapped_terms:
+          type: array
+          description: "List of associated external references/IDs"
+          example: ["DOID:3459","MONDO:0004989"]
+          items:
+            type: string
+        associated_pgs_ids:
+          type: array
+          description: "List of associated Polygenic Score IDs"
+          example: ["PGS000001","PGS000004"]
+          items:
+            type: string
+        child_associated_pgs_ids:
+          type: array
+          description: "List of Polygenic Score IDs associated with the children ontology term(s)"
+          example: ["PGS000002","PGS000003"]
+          items:
+            type: string
+
+    EFOTrait_OntologyChild:
+      description: "Based on the **EFOTrait_Ontology** schema, with the addition of the '**child_traits**' field."
+      allOf:
+        - $ref: '#/components/schemas/EFOTrait_Ontology'
+        - type: object
+          required:
+            - trait_id
+          properties:
+            child_traits:
+              type: array
+              description: "List of child traits with Polygenic Score associations."
+              items:
+                $ref: '#/components/schemas/EFOTrait_Ontology'
+                example:
+                  id: "EFO_1000294"
+                  label: "HER2 Positive Breast Carcinoma"
+                  description: "A biologic subset of breast carcinoma defined by high expression of HER2, GRB7, and TRAP100, and by lack of expression of estrogen receptor (ER)."
+                  url: "https://www.ebi.ac.uk/efo/EFO_1000294"
+                  trait_categories: ["Cancer"]
+                  trait_synonyms: ["HER2 Positive breast cancer","HER2 positive breast carcinoma"]
+                  trait_mapped_terms: ["DOID:0060079","MONDO:0006244"]
+                  associated_pgs_ids: ["PGS000215"]
+                  child_associated_pgs_ids: []
+
+
+    Metric:
+      type: object
+      description: "Metric data"
+      properties:
+        name_long:
+          type: string
+          description: "Long notation of the effect size (e.g. Odds Ratio), classification metric (e.g. Concordance Statistic) or other metric (e.g. Proportion of the variance explained)"
+          example: "Odds Ratio"
+        name_short:
+          type: string
+          description: "Short notation of the effect size (e.g. OR), classification metric (e.g. C-index) or other metric (R²)"
+          example: "OR"
+        estimate:
+          type: number
+          example: 1.54
+        ci_lower:
+          type: number
+          description: "95% Confidence Interval in the format - lower bound"
+          example: 1.51
+        ci_upper:
+          type: number
+          description: "95% Confidence Interval in the format - upper bound"
+          example: 1.57
+        se:
+          type: number
+          description: "Standard Error"
+          example: 0.0663
+
+
+    PerformanceMetric:
+      type: object
+      required:
+        - ppm_id
+      properties:
+        id:
+          type: string
+          description: "PGS Performance Metric identifier"
+          example: "PPM000001"
+        associated_pgs_id:
+          type: string
+          description: "Associated PGS ID"
+          example: "PGS000001"
+        phenotyping_reported:
+          type: string
+          example: "All breast cancer"
+        publication:
+          $ref: '#/components/schemas/Publication'
+        sampleset:
+          $ref: '#/components/schemas/SampleSet'
+        performance_metrics:
+          type: object
+          properties:
+            effect_sizes:
+              type: array
+              description: "List of Effect Size data"
+              items:
+                $ref: '#/components/schemas/Metric'
+            class_acc:
+              type: array
+              description: "List of Classification Metric data"
+              example: [
+                {
+                  "name_long": 'Area Under the Receiver-Operating Characteristic Curve',
+                  "name_short": 'AUROC',
+                  "estimate": 0.63,
+                  "ci_lower": null,
+                  "ci_upper": null,
+                  "se": null
+                }
+              ]
+              items:
+                $ref: '#/components/schemas/Metric'
+            othermetrics:
+              type: array
+              description: "Metrics that do not fit into the Effect Size or Classification Metric categories. e.g. R² (proportion of the variance explained), or reclassification metrics."
+              example: [
+                {
+                  "name_long": 'Proportion of the variance explained',
+                  "name_short": 'R2',
+                  "estimate": 0.0011,
+                  "ci_lower": null,
+                  "ci_upper": null,
+                  "se": null
+                }
+              ]
+              items:
+                $ref: '#/components/schemas/Metric'
+        covariates:
+          type: string
+          description: "Comma-separated list of covariates used in the prediction model to evaluate the PGS."
+          example: "Country, birth year, age, sex, smoking habits, etc."
+        performance_comments:
+          type: string
+          description: "Any other information relevant to the understanding of the performance metrics."
+
+    Publication:
+      type: object
+      required:
+        - pgp_id
+      properties:
+        id:
+          type: string
+          description: "PGS Catalog Publication identifier"
+          example: "PGP000001"
+        title:
+          type: string
+          description: "Publication title"
+          example: "Prediction of breast cancer risk based on profiling with common genetic variants."
+        doi:
+          type: string
+          description: "Digital Object Identifier is also curated to allow unpublished work (e.g. pre-prints) to be added to the catalog"
+          example: "10.1093/jnci/djv036"
+        PMID:
+          type: integer
+          description: "PubMed idenfier"
+          example: 25855707
+        journal:
+          type: string
+          description: "The publication's location"
+          example: "J Natl Cancer Inst"
+        firstauthor:
+          type: string
+          description: "First author of the publication"
+          example: "Mavaddat N"
+        date_publication:
+          type: string
+          description: "Date of publication (format YYYY-MM-DD)"
+          format: date
+          example: "2015-04-08"
+
+    Publication_extended:
+      description: "Based on the **Publication** object, with the addition of the '**authors**' and the '**associated_pgs_ids**'."
+      allOf:
+      - $ref: '#/components/schemas/Publication'
+      - type: object
+        required:
+          - pgp_id
+        properties:
+          date_release:
+            type: string
+            description: "Release date in PGS Catalog (format YYYY-MM-DD)"
+            format: date
+            example: "2015-04-08"
+          authors:
+            type: string
+            description: "Concatenated list of all the publication authors"
+            example: "Mavaddat N, ... , Garcia-Closas M."
+          associated_pgs_ids:
+            type: object
+            description: "List of associated Polygenic Score IDs at the development and evaluation stages"
+            properties:
+              development:
+                type: array
+                description: "List of associated Polygenic Score IDs at the PGS development stage"
+                example: ["PGS000001", "PGS000002"]
+                items:
+                  type: string
+              evaluation:
+                type: array
+                description: "List of associated Polygenic Score IDs at the PGS evaluation stage"
+                example: ["PGS000003"]
+                items:
+                  type: string
+
+    Release:
+      type: object
+      properties:
+        date:
+          type: string
+          description: "Date of PGS release (format YYYY-MM-DD)"
+          format: date
+          example: "2019-12-18"
+        score_count:
+          type: integer
+          description: "Count of new Polygenic Scores"
+          example: 23
+        performance_count:
+          type: integer
+          description: "Count of new PGS Performance Metrics"
+          example: 62
+        publication_count:
+          type: integer
+          description: "Count of new PGS Publications"
+          example: 19
+        notes:
+          type: string
+          example: "This release contains 23 new Score(s), 19 new Publication(s) and 62 new Performance metric(s)"
+        released_score_ids:
+          type: array
+          description: "List of new Polygenic Score IDs"
+          example: ["PGS000037","...","PGS000059"]
+          items:
+            type: string
+        released_publication_ids:
+          type: array
+          description: "List of new PGS Publication IDs"
+          example: ["PGP000025","...","PGP000044"]
+          items:
+            type: string
+        released_performance_ids:
+          type: array
+          description: "List of new PGS Performance Metric IDs"
+          example: ["PPM000082","...","PPM000150"]
+          items:
+            type: string
+
+    Sample:
+      type: object
+      description: ""
+      properties:
+        sample_number:
+          type: integer
+          description: "Number of individuals included in the sample"
+          example: 1043
+        sample_cases:
+          type: integer
+          description: "Number of cases"
+          example: 294
+        sample_controls:
+          type: integer
+          description: "Number of controls"
+          example: 749
+        sample_percent_male:
+          type: number
+          description: "Percentage of male participants"
+          example: 67.75
+        sample_age:
+          $ref: '#/components/schemas/Demographic'
+        phenotyping_free:
+          type: string
+          description: "Detailed phenotype description"
+          example: "Primary tumor samples from TCGA"
+        followup_time:
+          $ref: '#/components/schemas/Demographic'
+        ancestry_broad:
+          type: string
+          description: "Author reported ancestry is mapped to the best matching ancestry category from the NHGRI-EBI GWAS Catalog framework (Table 1, Morales et al. (2018))."
+          example: "European"
+        ancestry_free:
+          type: string
+          description: "A more detailed description of sample ancestry that usually matches the most specific description described by the authors (e.g. French, Chinese)."
+          example: "French Canadian"
+        ancestry_country:
+          type: string
+          description: "Author reported countries of recruitment (if available)."
+          example: "Canada"
+        ancestry_additional:
+          type: string
+          description: "Any additional description not captured in the structured data (e.g. founder or genetically isolated populations, or further description of admixed samples)."
+          example: "Cohort contains individuals of East Asian, European & Hispanic ancestries"
+        source_GWAS_catalog:
+          type: string
+          description: "Associated NHGRI-EBI GWAS Catalog study identifier"
+          example: "GCST001937"
+        source_PMID:
+          type: integer
+          description: "Associated PubMed identifier"
+          example: 26343387
+        source_DOI:
+          type: string
+          description: "Associated Digital Object Identifier"
+          example: "10.1038/s41588-021-00783-5"
+        cohorts:
+          type: array
+          description: "List of cohorts that collected the samples"
+          items:
+            $ref: '#/components/schemas/Cohort'
+        cohorts_additional:
+          type: string
+          description: "Any additional description about the samples and what they were used for that is not captured by the structured categories (e.g. sub-cohort information)."
+          example: "Phase 1"
+
+    SampleSet:
+      type: object
+      description: Group of samples used in one or several Polygenic Score evaluations
+      required:
+        - pss_id
+      properties:
+        id:
+          type: string
+          description: "PGS Sample Set identifier"
+          example: "PSS000070"
+        samples:
+          type: array
+          description: "List of samples grouped in the Sample Set"
+          items:
+            $ref: '#/components/schemas/Sample'
+
+    Score:
+      type: object
+      description: "Main structure containing information about Polygenic Score. The **publication** represents the citation for the paper that developed the PGS."
+      required:
+        - pgs_id
+      properties:
+        id:
+          type: string
+          description: "Polygenic Score identifier"
+          example: "PGS000001"
+        name:
+          type: string
+          description: This may be the name that the authors describe the PGS with in the source publication, or a name that a curator has assigned to identify the score during the curation process (before a PGS ID has been given)
+          example: "PRS77_BC"
+        ftp_scoring_file:
+          type: string
+          description: "URL to the scoring file on the PGS FTP"
+          example: "https://ftp.ebi.ac.uk/pub/databases/spot/pgs/scores/PGS000001/ScoringFiles/PGS000001.txt.gz"
+        ftp_harmonized_scoring_files:
+          type: object
+          description: "Harmonized scoring files indexed by genome build"
+          properties:
+            GRCh37:
+              type: object
+              description: "Scoring file with position in build GRCh37."
+              properties:
+                positions:
+                  type: string
+                  description: "Scoring file containing the harmonized positions to GRCh37"
+                  example: "https://ftp.ebi.ac.uk/pub/databases/spot/pgs/scores/PGS000001/ScoringFiles/Harmonized/PGS000001_hmPOS_GRCh37.txt.gz"
+            GRCh38:
+              type: object
+              description: "Scoring file with position in build GRCh38."
+              properties:
+                positions:
+                  type: string
+                  description: "Scoring file containing the harmonized positions to GRCh38"
+                  example: "https://ftp.ebi.ac.uk/pub/databases/spot/pgs/scores/PGS000001/ScoringFiles/Harmonized/PGS000001_hmPOS_GRCh38.txt.gz"
+        publication:
+          description: "Citation for the paper that developed the PGS"
+          $ref: '#/components/schemas/Publication'
+        matches_publication:
+          type: boolean
+          description: "Indicate if the PGS data matches the published polygenic score. If not, the authors have provided an alternative polygenic for the Catalog and some other data, such as performance metrics, may differ from the publication."
+          example: true
+        samples_variants:
+          type: array
+          description: "List of samples used to define the variant associations/effect-sizes used in the PGS. These data are extracted from the NHGRI-EBI GWAS Catalog when a study ID (GCST) is available."
+          items:
+            $ref: '#/components/schemas/Sample'
+        samples_training:
+          type: array
+          description: "List of samples used to develop/train the Polygenic Score (e.g. not used for variant discovery, and non-overlapping with the samples used to evaluate the PGS predictive ability)."
+          items:
+            $ref: '#/components/schemas/Sample'
+        trait_reported:
+          type: string
+          description: "The author-reported trait that the PGS has been developed to predict."
+          example: "Breast Cancer"
+        trait_additional:
+          type: string
+          description: "Any additional description not captured in the structured data"
+          example: "PheCode 174.1"
+        trait_efo:
+          type: array
+          description: "The Reported Trait is mapped to Experimental Factor Ontology (EFO) terms and their respective identifiers."
+          items:
+            $ref: '#/components/schemas/EFOTrait'
+        method_name:
+          type: string
+          description: "The name or description of the method or computational algorithm used to develop the PGS."
+          example: "SNPs passing genome-wide significance"
+        method_params:
+          type: string
+          description: "A description of the relevant inputs and parameters relevant to the PGS development method/process."
+          example: "P<5x10-8"
+        variants_number:
+          type: integer
+          description: "Number of variants used to calculate the PGS. In the future this will include a more detailed description of the types of variants present."
+          example: 77
+        variants_interactions:
+          type: integer
+          description: "Number of higher-order variant interactions included in the PGS."
+          example: 0
+        variants_genomebuild:
+          type: string
+          description: "The version of the genome assembly that the variants present in the PGS are associated with. Listed as NR (Not Reported) if unknown."
+          example: "GRCh38"
+        weight_type:
+          type: string
+          description: "Variant Weight supplied by the author: beta (effect size), or something like an OR/HR (odds/hazard ratio)."
+          example: "beta"
+        ancestry_distribution:
+          type: object
+          description: "Ancestry distribution on each PGS stage. For more information about Ancestry, please go to [Ancestry documentation](/docs/ancestry). To get the full name of the Ancestry categories (e.g. 'European' for 'EUR'), please look at the endpoint **/rest/ancestry_categories**"
+          properties:
+            gwas:
+              type: object
+              description: "Ancestry(ies) used in the Source of Variant Associations (GWAS) stage. Only available if there is ancestry data at this stage."
+              properties:
+                dist:
+                  type: object
+                  description: "Ancestry distribution. The endpoint **/rest/ancestry_categories** provides the mapping between the 3 letters symbol and the ancestry category name."
+                  additionalProperties:
+                    type: integer
+                  example:
+                    EUR: 75
+                    MAE: 25
+                count:
+                  type: integer
+                  description: "Total number of individuals from this stage."
+                  example: 187599
+                multi:
+                  type: array
+                  description: "Breakdown of the Multi-ancestry (MAO or MAE) distribution. Only available if there is a Multi-ancestry entry in the distribution."
+                  items:
+                    type: string
+                    example: ["MAE_EUR","MAE_EAS","MAE_AFR"]
+            dev:
+              type: object
+              description: "Ancestry(ies) used in the Score Development stage. Only available if there is ancestry data at this stage."
+              properties:
+                dist:
+                  type: object
+                  description: "Ancestry distribution. The endpoint **/rest/ancestry_categories** provides the mapping between the 3 letters symbol and the ancestry category name."
+                  additionalProperties:
+                    type: integer
+                  example:
+                    MAE: 88.7
+                    AFR: 7.9
+                    AMR: 3.4
+                count:
+                  type: integer
+                  description: "Total number of individuals from this stage."
+                  example: 120280
+                multi:
+                  type: array
+                  description: "Breakdown of the Multi-ancestry (MAO or MAE) distribution. Only available if there is a Multi-ancestry entry in the distribution."
+                  items:
+                    type: string
+                    example: ["MAE_EUR","MAE_AFR","MAE_GME"]
+            eval:
+              type: object
+              description: "Ancestry(ies) used in the PGS Evaluation stage. Only available if there is ancestry data at this stage."
+              properties:
+                dist:
+                  type: object
+                  description: "Ancestry distribution. The endpoint **/rest/ancestry_categories** provides the mapping between the 3 letters symbol and the ancestry category name."
+                  additionalProperties:
+                    type: integer
+                  example:
+                    MAE: 60
+                    AFR: 40
+                count:
+                  type: integer
+                  description: "Number of distinct Sample Sets."
+                  example: 40
+                multi:
+                  type: array
+                  description: "Breakdown of the Multi-ancestry (MAO or MAE) distribution. Only available if there is a Multi-ancestry entry in the distribution."
+                  items:
+                    type: string
+                    example: ["MAE_EUR","MAE_SAS"]
+        date_release:
+          type: string
+          description: "Release date in PGS Catalog (format YYYY-MM-DD)"
+          format: date
+          example: "2015-04-08"
+        license:
+          type: string
+          description: "The PGS Catalog distributes its data according to EBI’s standard Terms of Use. Some PGS have specific terms, licenses, or restrictions (e.g. non-commercial use) that we highlight in this field, if known."
+          example: "Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)."
+
+    TraitCategory:
+      type: object
+      description: "Trait category, as defined by the GWAS Catalog, to structure the numerous traits in broad groups"
+      properties:
+        label:
+          type: string
+          description: "Trait category name"
+          example: "Cancer"
+        efotraits:
+          $ref: '#/components/schemas/EFOTrait'
+
+
+    Pagination:
+      type: object
+      properties:
+        size:
+          type: integer
+          description: "Number of results in the current page"
+          example: 50
+        count:
+          type: integer
+          description: "Total count of results from the query"
+          example: 137
+        next:
+          type: string
+          description: "URL to the next page of results"
+          example: "https://www.pgscatalog.org/rest/<endpoint>/<endpoint-subtype>?limit=50&offset=100"
+        previous:
+          type: string
+          description: "URL to the previous page of results"
+          example: "https://www.pgscatalog.org/rest/<endpoint>/<endpoint-subtype>?limit=50"
+
+    Error_4XX:
+      type: object
+      properties:
+        error_status:
+          type: number
+          example: 404
+        message:
+          type: string
+          example: "This REST endpoint does not exist"
+
+
+paths:
+  # Sample/Cohort endpoints
+  '/rest/cohort/all':
+    get:
+      tags:
+        - "Sample endpoints"
+      operationId: getAllCohorts
+      description: |
+        Retrieve all Cohorts, including for each of them:
+          * Cohort full name
+          * Associated Polygenic Scores(s), with the distinction between associations with the Polygenic Score at the development phase or at the evaluation phase
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/cohort/all
+        ```
+        ---
+        ###### **Filtering**
+
+        You can choose to filter the results of this endpoint to a specified list of cohorts by providing a list of cohort symbols in one of two ways:
+        1. A comma-seperated list of cohort symbols in the request URL (this will not work for larger queries), e.g.:
+        ```
+        https://www.pgscatalog.org/rest/cohort/all?filter_ids=ABCFS,ESTHER
+        ```
+        2. A json-formatted list of IDs, e.g.: `{ "filter_ids" : ["ABCFS","ESTHER"] }`. Example with curl:
+        ```
+        curl -X GET 'https://www.pgscatalog.org/rest/cohort/all' -H 'Content-type:application/json' -d '{ "filter_ids" : ["ABCFS", "ESTHER"] }'
+        ```
+      parameters:
+        - in: query
+          name: filter_ids
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of cohort symbols or JSON object with an array of cohort symbols
+          examples:
+            pgs_cohort_sel:
+              summary: Select an example or type cohort symbol(s) - click on 'Try it out' first
+            pgs_cohort_1:
+              summary: 'ABCFS, ESTHER'
+              value: 'ABCFS,ESTHER'
+            pgs_cohort_2:
+              summary: 'NHS2, SISTER, PROFILE'
+              value: 'NHS2,SISTER,PROFILE'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of PGS Cohorts"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Cohort_extended'
+          description: |
+                  All PGS Cohorts
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/cohort/{cohort_symbol}':
+    get:
+      tags:
+        - "Sample endpoints"
+      operationId: getCohorts
+      description: |
+        Retrieve a Cohort, based on its symbol, including:
+          * Cohort full name
+          * Associated Polygenic Scores(s), with the distinction between associations with the Polygenic Score at the development phase or at the evaluation phase
+
+          Example of request:
+          ```
+          https://www.pgscatalog.org/rest/cohort/ABCFS
+          ```
+
+        __Notes__: A cohort symbol is not unique, therefore the API might return more than 1 result.
+      parameters:
+        - name: cohort_symbol
+          in: path
+          required: true
+          description: 'Short name of a cohort'
+          examples:
+            ABCFS:
+              value: "ABCFS"
+            ESTHER:
+              value: "ESTHER"
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of Cohorts"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Cohort_extended'
+          description: |
+                Cohort names + list of associated Polygenic Scores
+
+                ---
+
+                __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/sample_set/all':
+    get:
+      tags:
+        - "Sample endpoints"
+      operationId: getAllSampleSets
+      description: |
+          Retrieve one Sample Set (group of samples used on a Performance Metric), including for each of them:
+            * List of samples
+              * Ancestry data
+              * Corresponding cohort(s)
+
+          Example of request:
+          ```
+          https://www.pgscatalog.org/rest/sample_set/all
+          ```
+          ---
+          ###### **Filtering**
+
+          You can choose to filter the results of this endpoint to a specified list of sample sets by providing a list of PGS Sample Set IDs (PSS) in one of two ways:
+          1. A comma-seperated list of PSS IDs in the request URL (this will not work for larger queries), e.g.:
+          ```
+          https://www.pgscatalog.org/rest/sample_set/all?filter_ids=PSS000018,PSS000070
+          ```
+          2. A json-formatted list of IDs, e.g.: `{ "filter_ids" : ["PSS000018","PSS000070"] }`. Example with curl:
+          ```
+          curl -X GET 'https://www.pgscatalog.org/rest/sample_set/all' -H 'Content-type:application/json' -d '{ "filter_ids" : ["PSS000018", "PSS000070"] }'
+          ```
+      parameters:
+        - in: query
+          name: filter_ids
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of PGS Sample Set IDs or JSON object with an array of PGS Sample Set IDs
+          examples:
+            pss_ids_sel:
+              summary: Select an example or type PGS Sample Set ID(s) - click on 'Try it out' first
+            pss_ids_1:
+              summary: 'PSS000018, PSS000070'
+              value: 'PSS000018,PSS000070'
+            pss_ids_2:
+              summary: 'PSS000018, PSS000597, PSS001058'
+              value: 'PSS000018,PSS000597,PSS001058'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of PGS Cohorts"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SampleSet'
+          description: |
+                  All PGS Sample Sets
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/sample_set/{pss_id}':
+    get:
+      tags:
+        - "Sample endpoints"
+      operationId: getSampleSet
+      description: |
+        Retrieve one Sample Set (group of samples used on a Performance Metric), including:
+          * List of samples
+            * Ancestry data
+            * Corresponding cohort(s)
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/sample_set/PSS000070
+        ```
+      parameters:
+        - name: pss_id
+          in: path
+          required: true
+          description: 'PGS Sample Set ID (PSS)'
+          examples:
+            PSS000070:
+              value: "PSS000070"
+            PSS000020:
+              value: "PSS000020"
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SampleSet'
+          description: 'List of samples used evaluate a Polygenic Score'
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/sample_set/search':
+    get:
+      tags:
+        - "Sample endpoints"
+      operationId: searchSampleSet
+      description: |
+        Search PGS Sample Sets using defined parameters (cf. "Parameters" section below).<br />
+        The parameters can be used directly in the request URL, e.g.:
+        ```
+        https://www.pgscatalog.org/rest/sample_set/search?pgs_id=PGS000001
+        ```
+        This returns a list of PGS Sample Sets, including for each of them:
+          * List of samples
+            * Ancestry data
+            * Corresponding cohort(s)
+      parameters:
+        - in: query
+          name: pgs_id
+          schema:
+            type: string
+          required: false
+          description: Polygenic Score ID (PGS) - optional
+          examples:
+            pgs_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            PGS000001:
+              value: "PGS000001"
+            PGS000018:
+              value: "PGS000018"
+        - in: query
+          name: pgp_id
+          schema:
+            type: string
+          required: false
+          description: PGS Catalog Publication ID (PGP) - optional
+          examples:
+            pgp_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            PGP000001:
+              value: "PGP000001"
+            PGP000006:
+              value: "PGP000006"
+        - in: query
+          name: pmid
+          schema:
+            type: integer
+          required: false
+          description: PubMed ID (without the prefix "PMID:") - *optional*
+          examples:
+            pmid_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            pmid_1:
+              summary: 'PMID: 25855707'
+              value: 25855707
+            pmid_2:
+              summary: 'PMID: 30104762'
+              value: 30104762
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of Sample Sets"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SampleSet'
+          description: |
+              List of sample set(s) used evaluate a Polygenic Score
+
+              ---
+
+              __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+
+  # Performance endpoints
+  '/rest/performance/all':
+    get:
+      tags:
+        - "Performance Metric endpoints"
+      operationId: getAllPerformances
+      description: |
+        Retrieve all the PGS Performance Metrics, including for each of them:
+          * Performance metrics metadata (odd ratio, beta coefficient, C-index, ...)
+          * Reported phenotyping
+          * Associated Polygenic Score(s)
+          * Publication information
+          * List of samples used for the evaluation, with their ancestry and corresponding cohorts
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/performance/all
+        ```
+        ---
+        ###### **Filtering**
+
+        You can choose to filter the results of this endpoint to a specified list of performance metrics by providing a list of PGS Performance Metric IDs (PPM) in one of two ways:
+        1. A comma-seperated list of PPM IDs in the request URL (this will not work for larger queries), e.g.:
+        ```
+        https://www.pgscatalog.org/rest/performance/all?filter_ids=PPM000001,PPM000002
+        ```
+        2. A json-formatted list of IDs, e.g.: `{ "filter_ids" : ["PPM000001","PPM000002"] }`. Example with curl:
+        ```
+        curl -X GET 'https://www.pgscatalog.org/rest/performance/all' -H 'Content-type:application/json' -d '{ "filter_ids" : ["PPM000001", "PPM000002"] }'
+        ```
+      parameters:
+        - in: query
+          name: filter_ids
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of PGS Performance Metric IDs or JSON object with an array of PGS Performance Metric IDs
+          examples:
+            ppm_ids_sel:
+              summary: Select an example or type PGS Performance Metric ID(s) - click on 'Try it out' first
+            ppm_ids_1:
+              summary: 'PPM000001, PPM000002'
+              value: 'PPM000001,PPM000002'
+            ppm_ids_2:
+              summary: 'PPM000027, PPM001367, PPM002168'
+              value: 'PPM000027,PPM001367,PPM002168'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of PGS Performance Metrics"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PerformanceMetric'
+          description: |
+                  All PGS Performance Metrics
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/performance/{ppm_id}':
+    get:
+      tags:
+        - "Performance Metric endpoints"
+      operationId: getPerformanceMetric
+      description: |
+        Retrieve a PGS Performance Metric, including:
+          * Performance metrics metadata (odd ratio, beta coefficient, C-index, ...)
+          * Reported phenotyping
+          * Associated Polygenic Score(s)
+          * Publication information
+          * List of samples used for the evaluation, with their ancestry and corresponding cohorts
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/performance/PPM000001
+        ```
+      parameters:
+        - name: ppm_id
+          in: path
+          required: true
+          description: 'PGS Performance Metric ID (PPM)'
+          examples:
+            PPM000001:
+              value: "PPM000001"
+            PPM000002:
+              value: "PPM000002"
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceMetric'
+          description: 'Performance Metric + Polygenic Score + Publication + Sample Set'
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/performance/search':
+    get:
+      tags:
+        - "Performance Metric endpoints"
+      operationId: searchPerformanceMetrics
+      description: |
+        Search PGS Performance Metrics using defined parameters (cf. "Parameters" section below).<br />
+        The parameters can be used directly in the request URL, e.g.:
+        ```
+        https://www.pgscatalog.org/rest/performance/search?pgs_id=PGS000001
+        ```
+        This returns a list of PGS Performance Metrics, including for each of them:
+          * Performance metrics metadata (odd ratio, beta coefficient, C-index, ...)
+          * Reported phenotyping
+          * Associated Polygenic Score(s)
+          * Publication information
+          * List of samples used for the evaluation, with their ancestry and corresponding cohorts
+      parameters:
+        - in: query
+          name: pgs_id
+          schema:
+            type: string
+          required: false
+          description: Polygenic Score ID (PGS) - optional
+          examples:
+            pgs_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            PGS000001:
+              value: "PGS000001"
+            PGS000018:
+              value: "PGS000018"
+        - in: query
+          name: pgp_id
+          schema:
+            type: string
+          required: false
+          description: PGS Catalog Publication ID (PGP) - optional
+          examples:
+            pgp_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            PGP000001:
+              value: "PGP000001"
+            PGP000006:
+              value: "PGP000006"
+        - in: query
+          name: pmid
+          schema:
+            type: integer
+          required: false
+          description: PubMed ID (without the prefix "PMID:") - *optional*
+          examples:
+            pmid_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            pmid_1:
+              summary: 'PMID: 25855707'
+              value: 25855707
+            pmid_2:
+              summary: 'PMID: 30104762'
+              value: 30104762
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of PGS Performance Metrics"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PerformanceMetric'
+          description: |
+              Performance Metric + Polygenic Score + Publication + Sample Set
+
+              ---
+
+              __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+
+  # Publication endpoints
+  '/rest/publication/all':
+    get:
+      tags:
+        - "Publication endpoints"
+      operationId: getAllPublications
+      description: |
+        Retrieve all the PGS Publications, including for each of them:
+          * Pubmed ID and doi
+          * Publication title, journal, date and authors
+          * Associated Polygenic Score(s) with the distinction between associations with the Polygenic Score at the development phase or at the evaluation phase
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/publication/all
+        ```
+        ---
+        ###### **Filtering**
+
+        You can choose to filter the results of this endpoint to a specified list of studies by providing a list of PGS Publication IDs (PGP) in one of two ways:
+        1. A comma-seperated list of PGP IDs in the request URL (this will not work for larger queries), e.g.:
+        ```
+        https://www.pgscatalog.org/rest/publication/all?filter_ids=PGP000001,PGP000018
+        ```
+        2. A json-formatted list of IDs, e.g.: `{ "filter_ids" : ["PGP000001","PGP000018"] }`. Example with curl:
+        ```
+        curl -X GET 'https://www.pgscatalog.org/rest/publication/all' -H 'Content-type:application/json' -d '{ "filter_ids" : ["PGP000001", "PGP000018"] }'
+        ```
+      parameters:
+        - in: query
+          name: filter_ids
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of PGS Publication IDs or JSON object with an array of PGS Publication IDs
+          examples:
+            pgp_ids_sel:
+              summary: Select an example or type PGS Publication ID(s) - click on 'Try it out' first
+            pgp_ids_1:
+              summary: 'PGP000001, PGP000018'
+              value: 'PGP000001,PGP000018'
+            pgp_ids_2:
+              summary: 'PGP000007, PGP000011, PGP000014'
+              value: 'PGP000007,PGP000011,PGP000014'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of PGS Publications"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Publication_extended'
+          description: |
+                  All Publication information
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/publication/{pgp_id}':
+    get:
+      tags:
+        - "Publication endpoints"
+      operationId: getPublication
+      description: |
+        Retrieve a PGS Publication, including:
+          * Pubmed ID and doi
+          * Publication title, journal, date and authors
+          * Associated Polygenic Score(s) with the distinction between associations with the Polygenic Score at the development phase or at the evaluation phase
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/publication/PGP000001
+        ```
+      parameters:
+        - name: pgp_id
+          in: path
+          required: true
+          description: 'PGS Publication ID (PGP)'
+          examples:
+            PGP000001:
+              value: "PGP000001"
+            PGP000006:
+              value: "PGP000018"
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publication_extended'
+          description: 'Publication information'
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/publication/search':
+    get:
+      tags:
+          - "Publication endpoints"
+      operationId: searchPublications
+      description: |
+        Search PGS Publications using defined parameters (cf. "Parameters" section below).<br />
+        The parameters can be used directly in the request URL, e.g.:
+        ```
+        https://www.pgscatalog.org/rest/publication/search?pgs_id=PGS000001
+        ```
+        This returns a list of PGS Publications, including for each of them:
+          * Pubmed ID and doi
+          * Publication title, journal, data and authors
+          * Associated Polygenic Score(s) with the distinction between associations with the Polygenic Score at the development phase or at the evaluation phase
+      parameters:
+        - in: query
+          name: pgs_id
+          schema:
+            type: string
+          required: false
+          description: Polygenic Score ID (PGS) - optional
+          examples:
+            pgs_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            PGS000001:
+              value: "PGS000001"
+            PGS000018:
+              value: "PGS000018"
+        - in: query
+          name: pmid
+          schema:
+            type: integer
+          required: false
+          description: PubMed ID (without the prefix "PMID:") - *optional*
+          examples:
+            pmid_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            pmid_1:
+              summary: 'PMID: 25855707'
+              value: 25855707
+            pmid_2:
+              summary: 'PMID: 30104762'
+              value: 30104762
+        - in: query
+          name: author
+          schema:
+            type: string
+          required: false
+          description: Publication author (any author in the list of authors in a publication) - optional
+          examples:
+            author_sel:
+              summary: Select an example or type a name - click on 'Try it out' first
+            Mavaddat:
+              value: 'Mavaddat'
+            Inouye:
+              value: 'Inouye'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of PGS Publications"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Publication_extended'
+          description: |
+                  All Publication information
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+
+  # Release endpoints
+  '/rest/release/all':
+    get:
+      tags:
+        - "Release endpoints"
+      operationId: getAllReleases
+      description: |
+        Retrieve all the PGS Releases (more recent first), including for each of them:
+          * The release date (format YYYY-MM-DD)
+          * The number of new Polygenic Scores, Publications and Performance Metrics
+          * The list of new Polygenic Scores, Publications and Performance Metrics IDs
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/release/all
+        ```
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of PGS Releases"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Release'
+          description:  |
+                  Releases information
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/release/{release_date}':
+    get:
+      tags:
+        - "Release endpoints"
+      operationId: getRelease
+      description: |
+        Retrieve a PGS Release information, including:
+          * The release date (format YYYY-MM-DD)
+          * The number of new Polygenic Scores, Publications and Performance Metrics
+          * The list of new Polygenic Scores, Publications and Performance Metrics IDs
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/release/2020-02-12
+        ```
+      parameters:
+        - name: release_date
+          in: path
+          required: true
+          description: 'PGS Catalog release date (format YYYY-MM-DD)'
+          examples:
+            2019-12-18:
+              value: "2019-12-18"
+            2020-02-12:
+              value: "2020-02-12"
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+          description: 'Release information'
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/release/current':
+    get:
+      tags:
+        - "Release endpoints"
+      operationId: getCurrentRelease
+      description: |
+        Retrieve the current PGS Release, including:
+          * The release date (format YYYY-MM-DD)
+          * The number of new Polygenic Scores, Publications and Performance Metrics
+          * The list of new Polygenic Scores, Publications and Performance Metrics IDs
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/release/current
+        ```
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+          description: 'Release information'
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+
+  # Score endpoints
+  '/rest/score/all':
+    get:
+      tags:
+        - "Score endpoints"
+      operationId: getAllScores
+      description: |
+        Retrieve all the Polygenic Scores, including for each of them:
+          * The URL to the scoring file
+          * Publication information
+          * Associated trait(s) (and mapped ontology trait(s))
+          * The different samples used during the PGS, with ancestry information and cohort(s):
+            * **samples_variants**: samples used to define the variant associations/effect-sizes used in the PGS. These data are extracted from the NHGRI-EBI GWAS Catalog when a study ID (GCST) is available.
+            * **samples_training**: samples used to develop or train the score (e.g. not used for variant discovery, and non-overlapping with the samples used to evaluate the PGS predictive ability).
+          * The ancestry distribution
+          * The Terms/Licenses
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/score/all
+        ```
+        ---
+        ###### **Filtering**
+
+        You can choose to filter the results of this endpoint to a specified list of polygenic scores by providing a list of PGS IDs in one of two ways:
+        1. A comma-seperated list of scores in the request URL (this will not work for larger queries), e.g.:
+        ```
+        https://www.pgscatalog.org/rest/score/all?filter_ids=PGS000001,PGS000002
+        ```
+        2. A json-formatted list of IDs, e.g.: `{ "filter_ids" : ["PGS000001","PGS000002"] }`. Example with curl:
+        ```
+        curl -X GET 'https://www.pgscatalog.org/rest/score/all' -H 'Content-type:application/json' -d '{ "filter_ids" : ["PGS000001", "PGS000002"] }'
+        ```
+      parameters:
+        - in: query
+          name: filter_ids
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of PGS IDs or JSON object with an array of PGS IDs
+          examples:
+            pgs_ids_sel:
+              summary: Select an example or type PGS ID(s) - click on 'Try it out' first
+            pgs_ids_1:
+              summary: 'PGS000001, PGS000002'
+              value: 'PGS000001,PGS000002'
+            pgs_ids_2:
+              summary: 'PGS000014, PGS000020, PGS000031'
+              value: 'PGS000014,PGS000020,PGS000031'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of Polygenic Scores"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Score'
+          description: |
+                  All Polygenic Scores
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/score/{pgs_id}':
+    get:
+      tags:
+        - "Score endpoints"
+      operationId: getScore
+      description: |
+        Retrieve a Polygenic Score, including:
+          * The URL to the scoring file
+          * Publication information
+          * Associated trait(s) (and mapped ontology trait(s))
+          * The different samples used during the PGS, with ancestry information and cohort(s):
+            * **samples_variants**: samples used to define the variant associations/effect-sizes used in the PGS. These data are extracted from the NHGRI-EBI GWAS Catalog when a study ID (GCST) is available.
+            * **samples_training**: samples used to develop or train the score (e.g. not used for variant discovery, and non-overlapping with the samples used to evaluate the PGS predictive ability).
+          * The ancestry distribution
+          * The Terms/Licenses
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/score/PGS000001
+        ```
+      parameters:
+        - name: pgs_id
+          in: path
+          required: true
+          description: 'Polygenic Score ID'
+          examples:
+            PGS000001:
+              value: "PGS000001"
+            PGS000018:
+              value: "PGS000018"
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Score'
+          description: 'Polygenic Score'
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/score/search':
+    get:
+      tags:
+        - "Score endpoints"
+      operationId: searchScores
+      description: |
+        Search Polygenic Scores using defined parameters (cf. "Parameters" section below).<br />
+        The parameters can be used directly in the request URL, e.g.:
+        ```
+        https://www.pgscatalog.org/rest/score/search?trait_id=EFO_1000649
+        ```
+        This returns a list of Polygenic Scores, including for each of them:
+          * The URL to the scoring file
+          * Publication information
+          * Associated trait(s) (and mapped ontology trait(s))
+          * The different samples used during the PGS, with ancestry information and cohort(s):
+            * **samples_variants**: samples used to define the variant associations/effect-sizes used in the PGS. These data are extracted from the NHGRI-EBI GWAS Catalog when a study ID (GCST) is available.
+            * **samples_training**: samples used to develop or train the score (e.g. not used for variant discovery, and non-overlapping with the samples used to evaluate the PGS predictive ability).
+          * The ancestry distribution
+          * The Terms/Licenses
+      parameters:
+        - in: query
+          name: pgp_id
+          schema:
+            type: string
+          required: false
+          description: PGS Catalog Publication ID (PGP) - optional
+          examples:
+            pgp_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            PGP000001:
+              value: "PGP000001"
+            PGP000006:
+              value: "PGP000006"
+        - in: query
+          name: pmid
+          schema:
+            type: integer
+          required: false
+          description: PubMed ID (without the prefix "PMID:") - *optional*
+          examples:
+            pmid_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            pmid_1:
+              summary: 'PMID: 25855707'
+              value: 25855707
+            pmid_2:
+              summary: 'PMID: 30104762'
+              value: 30104762
+        - in: query
+          name: trait_id
+          schema:
+            type: string
+          description: Ontology ID (e.g. from EFO, HP or MONDO) with the format "EFO_XXXX" - *optional*
+          examples:
+            trait_id_sel:
+              summary: Select an example or type an ID - click on 'Try it out' first
+            EFO_1000649:
+              value: 'EFO_1000649'
+            EFO_0001360:
+              value: 'EFO_0001360'
+        - in: query
+          name: pgs_ids
+          schema:
+            type: string
+          description: Comma-separated list of PGS IDs - <span style="color:red">**DEPRECATED!</span>** Please use the endpoint <code>/rest/score/all?filter_ids=<pgs_ids></code> instead - *optional*
+          examples:
+            pgs_ids_sel:
+              summary: Select an example or type PGS ID(s) - click on 'Try it out' first
+            pgs_ids_1:
+              summary: 'PGS000001, PGS000002'
+              value: 'PGS000001,PGS000002'
+            pgs_ids_2:
+              summary: 'PGS000014, PGS000020, PGS000031'
+              value: 'PGS000014,PGS000020,PGS000031'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of Polygenic Scores"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Score'
+          description:  |
+                  Search Polygenic Score(s)
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+
+  # Trait endpoints
+  '/rest/trait/all':
+    get:
+      tags:
+        - "Trait endpoints"
+      operationId: getAllTraits
+      description: |
+        Retrieve all the Traits, including for each of them:
+          * Ontology ID, trait label, description and URL
+          * Trait categories
+          * Synonyms and external mapped terms
+          * Associated Polygenic Score(s)
+          * Associated Polygenic Score(s) with child trait(s) - **<span class="colour_2">[</span>** only when the parameter **include_child_associated_pgs_ids** is set to **1** **<span class="colour_2">]</span>**
+
+        This endpoint can be used to retrieve trait-PGS mappings for any trait in the database
+        (including parent traits from the ontology that aren’t included in the `/rest/trait/all` endpoint).
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/trait/all
+        ```
+        ---
+        ###### **Filtering**
+
+        You can choose to filter the results of this endpoint to a specified list of traits by providing a list of ontology IDs in one of two ways:
+        1. A comma-seperated list of ontology IDs in the request URL (this will not work for larger queries), e.g.:
+        ```
+        https://www.pgscatalog.org/rest/trait/all?filter_ids=EFO_0000305,EFO_0001645
+        ```
+        2. A json-formatted list of IDs, e.g.: `{ "filter_ids" : ["EFO_0000305","EFO_0001645"] }`. Example with curl:
+        ```
+        curl -X GET 'https://www.pgscatalog.org/rest/trait/all' -H 'Content-type:application/json' -d '{ "filter_ids" : ["EFO_0000305", "EFO_0001645"] }'
+        ```
+        The 2 parameters can be used in JSON: `{ "filter_ids" : ["EFO_0000305","EFO_0001645"], "include_child_associated_pgs_ids" : 1 }`
+      parameters:
+        - in: query
+          name: filter_ids
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of ontology trait IDs or JSON object with an array of ontology trait IDs
+          examples:
+            trait_ids_sel:
+              summary: Select an example or type ontology ID(s) - click on 'Try it out' first
+            trait_ids_1:
+              summary: 'EFO_0000305, EFO_0001645'
+              value: 'EFO_0000305,EFO_0001645'
+            pgs_ids_2:
+              summary: 'EFO_0000400, EFO_0004340, MONDO_0007576'
+              value: 'EFO_0000400,EFO_0004340,MONDO_0007576'
+        - in: query
+          name: include_child_associated_pgs_ids
+          schema:
+            type: integer
+          required: false
+          description: 'Flag to include or not the list of PGS IDs associated with children traits'
+          examples:
+            exclude_asso_child_sel:
+              summary: Exclude the list of PGS IDs associated with children traits
+              value: 0
+            include_asso_child_sel:
+              summary: Include the list of PGS IDs associated with children traits
+              value: 1
+        - in: query
+          name: include_parents
+          schema:
+            type: integer
+          required: false
+          description: 'Flag to include or not the parents of the traits associated with PGS'
+          examples:
+            exclude_parents_sel:
+              summary: Exclude the parents traits
+              value: 0
+            include_parents_sel:
+              summary: Include the parents traits
+              value: 1
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of Traits"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EFOTrait_Ontology'
+          description: |
+                  Traits in PGS Catalog
+
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/trait/{trait_id}':
+    get:
+      tags:
+        - "Trait endpoints"
+      operationId: getTrait
+      description: |
+        Retrieve a Trait, including:
+          * Ontology ID, trait label, description and URL
+          * Trait categories
+          * Synonyms and external mapped terms
+          * Associated Polygenic Score(s)
+          * Associated Polygenic Score(s) with child trait(s)
+          * Child traits (when the parameter *include_children* is set to 1)
+
+        This endpoint can be used to retrieve trait-PGS mappings for any trait in the database
+        (including parent terms from the ontology that aren’t included in the `/rest/trait/all` endpoint).
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/trait/EFO_0000305
+        ```
+      parameters:
+        - name: trait_id
+          in: path
+          required: true
+          description: 'Ontology ID (e.g. from EFO, HP or MONDO) with the format "EFO_XXXX"'
+          examples:
+            efo_1:
+              summary: EFO_0000305 - breast carcinoma
+              value: "EFO_0000305"
+            efo_2:
+              summary: EFO_0001645 - coronary artery disease
+              value: "EFO_0001645"
+          schema:
+            type: string
+        - in: query
+          name: include_children
+          schema:
+            type: integer
+          required: false
+          description: 'Flag to include or not the children of the searched trait (defaut: 1)'
+          examples:
+            include_children_sel:
+              summary: Include the child terms
+              value: 1
+            exclude_children_sel:
+              summary: Exclude the child terms
+              value: 0
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EFOTrait_OntologyChild'
+          description: 'Trait information'
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/trait/search':
+    get:
+      tags:
+          - "Trait endpoints"
+      operationId: searchTrait
+      description: |
+        Search for Traits based on terms present in the ID, label, description, synonyms, categories, or external mapped terms.<br />
+        The search term and filters for exact matching and child-term relationships can be included directly in the request URL, e.g.:
+        ```
+        https://www.pgscatalog.org/rest/trait/search?term=Alzheimer
+        ```
+        This returns a list of Traits matching the search term (and by default their child terms from the ontology), including for each of them:
+          * Ontology ID, trait label, description and URL
+          * Trait categories
+          * Synonyms and external mapped terms
+          * Associated Polygenic Score(s)
+          * Associated Polygenic Score(s) with child trait(s)
+
+        This endpoint searches all traits in the database, including parent terms from the ontology that aren’t included in the `/rest/trait/all` endpoint.<br />
+      parameters:
+        - in: query
+          name: term
+          schema:
+            type: string
+          required: true
+          description: 'Trait ID, trait name, trait category, trait synonym or external mapped terms/IDs'
+          examples:
+            trait_1:
+              summary: Alzheimer - [trait name]
+              value: Alzheimer
+            trait_2:
+              summary: Neurological disorder - [trait category]
+              value: Neurological disorder
+            trait_3:
+              summary: ICD10:I25 - [external mapped terms/IDs]
+              value: ICD10:I25
+            trait_4:
+              summary: OMIM:605526 - [external mapped terms/IDs]
+              value: OMIM:605526
+
+        - in: query
+          name: exact
+          schema:
+            type: integer
+          required: false
+          description: 'Flag to search only the exact term or not (defaut: 0)'
+          examples:
+            all_terms:
+              summary: Query on all matching terms
+              value: 0
+            exact_terms:
+              summary: Limit the query to the exact term
+              value: 1
+        - in: query
+          name: include_children
+          schema:
+            type: integer
+          required: false
+          description: 'Flag to include or not the children of the searched trait (defaut: 1)'
+          examples:
+            include_children_sel:
+              summary: Include the child terms
+              value: 1
+            exclude_children_sel:
+              summary: Exclude the child terms
+              value: 0
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of Traits"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EFOTrait_Ontology'
+          description: |
+                  Traits in PGS Catalog
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  # TraitCategory endpoint
+  '/rest/trait_category/all':
+    get:
+      tags:
+        - "Trait endpoints"
+      operationId: getAllTraitCategories
+      description: |
+        Retrieve all higher-level Trait Categories in the Catalog, including for each of them:
+          * Trait category name
+          * List of all PGS Traits (EFO Ontology Terms) associated with the category
+
+        Trait Category to Trait mappings are retrieved from the <a class="link external-link" href="https://www.ebi.ac.uk/gwas/rest/docs/api#custom-parent" target="_blank">NHGRI-EBI GWAS Catalog</a>, structuring the traits (ontology terms) into higher-level groups..
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/trait_category/all
+        ```
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Pagination'
+                properties:
+                  results:
+                    description: "List of Trait Categories"
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TraitCategory'
+          description: |
+                  Trait categories in PGS Catalog
+
+                  ---
+
+                  __Notes:__ This endpoint uses pagination.
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+
+  # Other endpoints
+  '/rest/info':
+    get:
+      tags:
+        - "Other endpoints"
+      operationId: getInfo
+      description: |
+        Return diverse information related to the REST API and the PGS Catalog:
+        * REST API version and latest changelog
+        * Latest release date and data count
+        * PGS citation
+        * Ensembl version used to generate the Harmonized Scoring files
+        * Link to terms of use
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/info/
+        ```
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: "PGS Catalog information such as citation, REST API version, ..."
+                type: object
+                properties:
+                  rest_api:
+                    type: object
+                    description: "Information about the current version of the REST API"
+                    properties:
+                      version:
+                        type: string
+                        description: "REST API version"
+                        example: "1.7.1"
+                      changelog:
+                          type: array
+                          description: "REST API changelog"
+                          example: ["New endpoint `/rest/api_versions` providing the list of all the REST API versions and their changelogs.", "Change the data type of the field 'rest_api/version' in `/rest/info` to 'string'."]
+                          items:
+                            type: string
+                  latest_release:
+                    type: object
+                    description: "Information about the latest PGS Catalog release"
+                    properties:
+                      date:
+                        type: string
+                        description: "Date of the latest PGS release (format YYYY-MM-DD)"
+                        format: date
+                        example: "2024-10-08"
+                      scores:
+                        type: number
+                        description: "Number of Scores in the Catalog"
+                        example: 5001
+                      traits:
+                        type: number
+                        description: "Number of Traits in the Catalog"
+                        example: 654
+                      publications:
+                        type: number
+                        description: "Number of Publications in the Catalog"
+                        example: 673
+                  citation:
+                    type: object
+                    description: "Information about the latest PGS Catalog publication"
+                    properties:
+                      title:
+                        type: string
+                        description: "Title of the publication"
+                        example: 'Enhancing the Polygenic Score Catalog with tools for score calculation and ancestry normalization'
+                      doi:
+                        type: string
+                        description: "doi of the publication"
+                        example: '10.1038/s41588-024-01937-x'
+                      PMID:
+                        type: number
+                        description: "PubMed ID"
+                        example: 39327485
+                      authors:
+                        type: string
+                        description: "List of the publication authors"
+                        example: 'Samuel A. Lambert, ... , Michael Inouye'
+                      journal:
+                        type: string
+                        description: "Name of the journal"
+                        example: 'Nature Genetics'
+                      year:
+                        type: number
+                        description: "Year of publication"
+                        example: 2024
+                  pgs_catalog_publications:
+                    type: array
+                    description: "List of all PGS Catalog publications"
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                          description: "Title of the publication"
+                          example: 'Enhancing the Polygenic Score Catalog with tools for score calculation and ancestry normalization'
+                        doi:
+                          type: string
+                          description: "doi of the publication"
+                          example: '10.1038/s41588-024-01937-x'
+                        PMID:
+                          type: number
+                          description: "PubMed ID"
+                          example: 39327485
+                        authors:
+                          type: string
+                          description: "Publication first author(s)"
+                          example: 'Lambert et al'
+                        journal:
+                          type: string
+                          description: "Name of the journal"
+                          example: 'Nature Genetics'
+                        year:
+                          type: number
+                          description: "Year of publication"
+                          example: 2024
+                  ensembl_version:
+                    type: number
+                    description: "Ensembl version used to generate the Harmonized Scoring files"
+                    example: 104
+                  terms_of_use:
+                    type: string
+                    description: "URL to the terms of use"
+                    example: 'https://www.ebi.ac.uk/about/terms-of-use'
+          description: ''
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/api_versions':
+    get:
+      tags:
+        - "Other endpoints"
+      operationId: getApiVersions
+      description: |
+        Return information about current and past REST API versions:
+        * Version
+        * Date
+        * Changelog
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/api_versions/
+        ```
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: "PGS Catalog information such as citation, REST API version, ..."
+                type: object
+                properties:
+                  current:
+                    type: object
+                    description: "Information about the current version of the REST API"
+                    properties:
+                      version:
+                        type: string
+                        description: "REST API version"
+                        example: "1.8"
+                      date:
+                        type: string
+                        description: "Release date (month) of the REST API"
+                        example: "2021-06"
+                      changelog:
+                          type: array
+                          description: "REST API changelog"
+                          example: ["New endpoint `/rest/api_versions` providing the list of all the REST API versions and their changelogs.", "Change the data type of the field 'rest_api/version' in `/rest/info` to 'string'.", "Change the data structure of the `/rest/ancestry_categories` endpoint by adding the new fields 'display_category' and 'categories'."]
+                          items:
+                            type: string
+                  previous:
+                    type: array
+                    items:
+                      type: object
+                      description: "Information about the previous versions of the REST API"
+                      properties:
+                        version:
+                          type: string
+                          description: "REST API version"
+                          example: "1.7"
+                        date:
+                          type: string
+                          description: "Release date (month) of the REST API"
+                          example: "2021-04"
+                        changelog:
+                            type: array
+                            description: "REST API changelog"
+                            example: ["New data 'ancestry_distribution' in the `/rest/score` endpoints, providing information about ancestry distribution on each stage of the PGS","New endpoint `/rest/ancestry_categories` providing the list of ancestry symbols and names."]
+                            items:
+                              type: string
+          description: ''
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+  '/rest/ancestry_categories':
+    get:
+      tags:
+        - "Other endpoints"
+      operationId: getAncestryCategories
+      description: |
+        Return the list of mappings between the ancestry symbols (e.g. EUR) and their name (e.g. European):
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/ancestry_categories/
+        ```
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                description: "List of ancestry symbols and categories"
+                additionalProperties:
+                  type: object
+                  description: "Categories corresponding to the ancestry symbol"
+                  properties:
+                    display_category:
+                      type: string
+                      description: 'Category used in the ancestry distribution charts'
+                    categories:
+                      type: array
+                      description: "List of corresponding categories in the database"
+                      items:
+                        type: string
+                example:
+                  AFR: { "display_category": "African", "categories": ["African American or Afro-Caribbean", "African unspecified"] }
+                  EUR: { "display_category": "European", "categories": ["European"] }
+          description: ''
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)
+
+
+  '/rest/gwas/get_score_ids/{gcst_id}':
+    get:
+      tags:
+        - "Other endpoints"
+      operationId: getGCST
+      description: |
+        Retrieve all the Polygenic Scores IDs using a given NHGRI-EBI GWAS Catalog study (GCST) as source of variant association
+
+        Example of request:
+        ```
+        https://www.pgscatalog.org/rest/gwas/get_score_ids/GCST001937
+        ```
+      parameters:
+        - name: gcst_id
+          in: path
+          required: true
+          description: 'NHGRI-EBI GWAS Catalog Study ID (GCST)'
+          examples:
+            GCST001937:
+              value: "GCST001937"
+            GCST004988:
+              value: "GCST004988"
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: "List of Polygenic Score IDs"
+                type: array
+                example: ["PGS000001","PGS000002","PGS000003"]
+                items:
+                  type: string
+          description: ''
+        '4XX':
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error_4XX'
+          description: Client error (e.g. 400 - Bad request, 405 - Method not allowed)

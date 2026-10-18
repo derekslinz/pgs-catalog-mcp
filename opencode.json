@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "servers": {
+      "pgs-catalog-mcp": {
+        "type": "local",
+        "command": [
+          "/Users/lderek/.hermes/node/bin/node",
+          "/Users/lderek/GitHub/pgs-catalog-mcp/dist/index.js"
+        ]
+      }
+    }
+  }
+}

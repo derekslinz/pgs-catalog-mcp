@@ -1,0 +1,33 @@
+{
+  "name": "pgs-catalog-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the PGS Catalog REST API (polygenic scores, publications, traits, performance metrics)",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node dist/index.js",
+    "setup": "node dist/index.js setup",
+    "setup:json": "node dist/index.js setup --json",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "npm run build && node --test test/",
+    "test:unit": "node --test test/",
+    "test:e2e": "npm run build && node scripts/smoke.mjs"
+  },
+  "keywords": [],
+  "author": "lderek",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "pgscatalog-mcp": "./dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "basic-ftp": "^6.2.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^5.9.3"
+  }
+}
